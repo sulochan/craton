@@ -66,3 +66,8 @@ class NotFound(Base):
 
 class UnknownException(Base):
     code = 500
+
+
+class UnSupportedFilterOperator(Base):
+    code = 400
+    msg = "Filter operator not supported."
