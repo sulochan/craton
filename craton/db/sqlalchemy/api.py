@@ -158,7 +158,7 @@ def _device_labels_delete(context, device_type, device_id, labels):
         return device
 
 
-def _device_data_update(context, device_type, device_id, data):
+def _device_variables_update(context, device_type, device_id, data):
     """Update existing device variables or create when its not present."""
     session = get_session()
     with session.begin():
@@ -179,8 +179,8 @@ def _device_data_update(context, device_type, device_id, data):
         return ref
 
 
-def _device_data_delete(context, device_type, device_id, data):
-    """Delete the existing key (variable) from device data."""
+def _device_variables_delete(context, device_type, device_id, data):
+    """Delete the existing key from device variables."""
     session = get_session()
     with session.begin():
         _devices = with_polymorphic(models.Device, '*')
@@ -271,7 +271,7 @@ def cells_delete(context, cell_id):
         query.delete()
 
 
-def cells_data_update(context, cell_id, data):
+def cells_variables_update(context, cell_id, data):
     """Update existing cells variables or create when
     its not present.
     """
@@ -286,7 +286,7 @@ def cells_data_update(context, cell_id, data):
         return cell_ref
 
 
-def cells_data_delete(context, cell_id, data):
+def cells_variables_delete(context, cell_id, data):
     """Delete the existing key (variable) from cells data."""
     session = get_session()
     with session.begin():
@@ -369,7 +369,7 @@ def regions_delete(context, region_id):
     return
 
 
-def regions_data_update(context, region_id, data):
+def regions_variables_update(context, region_id, data):
     """
     Update existing region variables or create when its not present.
     """
@@ -384,8 +384,8 @@ def regions_data_update(context, region_id, data):
         return region_ref
 
 
-def regions_data_delete(context, region_id, data):
-    """Delete the existing key (variable) from region data."""
+def regions_variables_delete(context, region_id, data):
+    """Delete the existing key from region variables."""
     session = get_session()
     with session.begin():
         query = model_query(context, models.Region, session=session,
@@ -490,14 +490,14 @@ def hosts_delete(context, host_id):
     return
 
 
-def hosts_data_update(context, host_id, data):
+def hosts_variables_update(context, host_id, data):
     """Update existing host variables or create when its not present."""
-    return _device_data_update(context, 'hosts', host_id, data)
+    return _device_variables_update(context, 'hosts', host_id, data)
 
 
-def hosts_data_delete(context, host_id, data):
-    """Delete the existing key (variable) from region data."""
-    return _device_data_delete(context, 'hosts', host_id, data)
+def hosts_variables_delete(context, host_id, data):
+    """Delete the existing key from region variables."""
+    return _device_variables_delete(context, 'hosts', host_id, data)
 
 
 def hosts_labels_update(context, host_id, labels):
@@ -704,7 +704,7 @@ def networks_delete(context, network_id):
     return
 
 
-def networks_data_update(context, network_id, data):
+def networks_variables_update(context, network_id, data):
     """Update/create networks variables data."""
     session = get_session()
     with session.begin():
@@ -723,7 +723,7 @@ def networks_data_update(context, network_id, data):
         return ref
 
 
-def networks_data_delete(context, network_id, data):
+def networks_variables_delete(context, network_id, data):
     """Delete the existing key (variable) from networks data."""
     session = get_session()
     with session.begin():
@@ -819,14 +819,14 @@ def netdevices_labels_delete(context, device_id, labels):
     return _device_labels_delete(context, 'net_devices', device_id, labels)
 
 
-def netdevices_data_update(context, device_id, data):
+def netdevices_variables_update(context, device_id, data):
     """Update/create network device variables data."""
-    return _device_data_update(context, 'net_devices', device_id, data)
+    return _device_variables_update(context, 'net_devices', device_id, data)
 
 
-def netdevices_data_delete(context, device_id, data):
+def netdevices_variables_delete(context, device_id, data):
     """Delete the existing key (variable) from network device data."""
-    return _device_data_delete(context, 'net_devices', device_id, data)
+    return _device_variables_delete(context, 'net_devices', device_id, data)
 
 
 def net_interfaces_get_by_device(context, device_id, filters):

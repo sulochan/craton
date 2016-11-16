@@ -66,32 +66,32 @@ class RegionsDBTestCase(base.DBTestCase):
                           dbapi.regions_get_by_name,
                           self.context, 'fake-region')
 
-    def test_region_data_update_does_create_variables(self):
+    def test_region_variables_update_does_create_variables(self):
         dbapi.regions_create(self.context, region1)
         res = dbapi.regions_get_by_name(self.context, region1['name'])
         self.assertEqual(res.variables, {})
         variables = {"key1": "value1", "key2": "value2"}
-        res = dbapi.regions_data_update(self.context, res.id, variables)
+        res = dbapi.regions_variables_update(self.context, res.id, variables)
         self.assertEqual(res.variables, variables)
 
-    def test_region_data_update_does_update_variables(self):
+    def test_region_variables_update_does_update_variables(self):
         dbapi.regions_create(self.context, region1)
         res = dbapi.regions_get_by_name(self.context, region1['name'])
         self.assertEqual(res.variables, {})
         variables = {"key1": "value1", "key2": "value2"}
-        res = dbapi.regions_data_update(self.context, res.id, variables)
+        res = dbapi.regions_variables_update(self.context, res.id, variables)
         self.assertEqual(res.variables, variables)
         new_variables = {"key1": "tom", "key2": "cat"}
-        res = dbapi.regions_data_update(self.context, res.id, new_variables)
+        res = dbapi.regions_variables_update(self.context, res.id, new_variables)
         self.assertEqual(res.variables, new_variables)
 
-    def test_region_data_delete(self):
+    def test_region_variables_delete(self):
         dbapi.regions_create(self.context, region1)
         res = dbapi.regions_get_by_name(self.context, region1['name'])
         self.assertEqual(res.variables, {})
         variables = {"key1": "value1", "key2": "value2"}
-        res = dbapi.regions_data_update(self.context, res.id, variables)
+        res = dbapi.regions_variables_update(self.context, res.id, variables)
         self.assertEqual(res.variables, variables)
         # NOTE(sulo): we delete variables by their key
-        res = dbapi.regions_data_delete(self.context, res.id, {"key1": "key1"})
+        res = dbapi.regions_variables_delete(self.context, res.id, {"key1": "key1"})
         self.assertEqual(res.variables, {"key2": "value2"})

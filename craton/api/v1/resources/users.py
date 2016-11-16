@@ -22,12 +22,10 @@ class Users(base.Resource):
 
         if user_name:
             user_obj = dbapi.users_get_by_name(context, user_name)
-            user_obj.data = user_obj.variables
             return jsonutils.to_primitive([user_obj]), 200, None
 
         if user_id:
             user_obj = dbapi.users_get_by_id(context, user_id)
-            user_obj.data = user_obj.variables
             return jsonutils.to_primitive([user_obj]), 200, None
 
         users_obj = dbapi.users_get_all(context)
