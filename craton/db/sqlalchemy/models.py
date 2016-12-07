@@ -19,10 +19,11 @@ import itertools
 
 from oslo_db.sqlalchemy import models
 from sqlalchemy import (
-    Boolean, Column, ForeignKey, Integer, String, Text, UniqueConstraint)
+    Boolean, Column, Enum, ForeignKey, Integer, String, Text, UniqueConstraint)
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.ext.declarative.api import _declarative_constructor
+from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.orm import backref, object_mapper, relationship
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy_utils.types.ip_address import IPAddressType
@@ -30,7 +31,7 @@ from sqlalchemy_utils.types.json import JSONType
 from sqlalchemy_utils.types.uuid import UUIDType
 
 from craton.db.api import Blame
-
+from craton import states
 
 # TODO(jimbaker) set up table args for a given database/storage
 # engine, as configured.  See
@@ -243,7 +244,7 @@ class Project(Base):
     devices = relationship('Device', back_populates='project')
     users = relationship('User', back_populates='project')
     networks = relationship('Network', back_populates='project')
-
+    workflow_defs = relationship('WorkflowDef', back_populates='project')
 
 class User(Base, VariableMixin):
     __tablename__ = 'users'
@@ -486,3 +487,112 @@ class AccessSecret(Base):
     cert = Column(Text)
 
     devices = relationship('Device', back_populates='access_secret')
+
+
+class WorkflowDef(Base, VariableMixin):
+    """WorkflowDef is a predefined set of task(s) represented as a workflow.
+    An instance of workflow defintion is ran againt an inventory in the
+    form of a workflow, with each task and its status tracked.
+    Users can create workflowsdef from available tasks definitions, which are
+    controlled by RABC.
+    """
+    __tablename__ = 'workflow_defs'
+    id = Column(Integer, primary_key=True)
+    project_id = Column(
+        UUIDType(binary=False), ForeignKey('projects.id'), index=True, nullable=False)
+    name = Column(String(255), unique=True, nullable=False)
+    note = Column(Text)
+
+    project = relationship('Project', back_populates='workflow_defs')
+    workflow_tasks = relationship(
+        'WorkflowTask', order_by='WorkflowTask.position',
+        collection_class=ordering_list('position'), back_populates='workflow_defs')
+
+
+class Workflow(Base, VariableMixin):
+    """Workflow is a group of task(s) that is executed against an invntory.
+    Worflow can represent a single task for a group of task againt one or
+    more device provided in the form of an invenroty.
+    """
+    __tablename__ = 'workflows'
+    id = Column(Integer, primary_key=True)
+    workflow_def_id = Column(
+        Integer, ForeignKey('workflow_defs.id'), nullable=False)
+    inventory = Column(JSONType, nullable=False)
+    note = Column(Text)
+
+    workflow_def = relationship('WorkflowDef')
+
+    @property
+    def resolved(self):
+        return ChainMap(
+            self.variables, self.workflow_def.variables)
+
+
+task_states = [
+    states.CLAIMED,
+    states.IGNORE,
+    states.PAUSED,
+    states.PENDING,
+    states.RUNNING,
+    states.FAILED,
+    states.SUCCESS,
+]
+
+task_def_states = [
+    states.BUILDING,
+    states.BUILDFAILED,
+    states.BUILDPENDING,
+    states.READY,
+]
+
+
+class TaskDef(Base):
+    """TaskDef represents a task that is used to execute a function.
+    TaskDef is used as a prt of the workflow to run a certain task
+    against a set of devices.
+    """
+    __tablename__ = 'task_defs'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False)
+    note = Column(Text)
+    status = Column(Enum(*task_def_states, name='states'))
+    # command is the command that will be executed on the docker
+    # container to run the task.
+    command_spec = Column(JSONType, nullable=False)
+    # task_module is the location of the task code, we start with
+    # github support. i.e: point to github and we clone and build
+    # the image from this location.
+    task_module = Column(Text, nullable=False)
+    project_id = Column(
+        UUIDType(binary=False), ForeignKey('projects.id'), index=True, nullable=False)
+
+    workflow_tasks= relationship('WorkflowTask', back_populates='task_defs')
+    project = relationship('Project')
+
+
+class Task(Base):
+    __tablename__ = 'tasks'
+    id = Column(Integer, primary_key=True)
+    task_def_id = Column(Integer, ForeignKey('task_defs.id'), nullable=False)
+    workflow_id = Column(Integer, ForeignKey('workflows.id'), nullable=False)
+    device_id = Column(Integer, ForeignKey('devices.id'), nullable=False)
+
+    # unique name generated for each TaskFlow task, so notifications
+    # can be captured with last result/state recorded
+    taskflow_name = Column(String(255), nullable=False)
+    taskflow_result = Column(JSONType)
+    taskflow_state = Column(Enum(*task_states, name='states'))
+
+    task_def = relationship(TaskDef)
+    device = relationship(Device)
+
+
+class WorkflowTask(Base):
+    __tablename__ = 'workflow_tasks'
+    workflow_defs_id = Column(Integer, ForeignKey('workflow_defs.id'), primary_key=True)
+    task_defs_id = Column(Integer, ForeignKey('task_defs.id'), primary_key=True)
+    position = Column(Integer, nullable=False)
+
+    workflow_defs = relationship(WorkflowDef, back_populates='workflow_tasks')
+    task_defs = relationship(TaskDef, back_populates='workflow_tasks')
